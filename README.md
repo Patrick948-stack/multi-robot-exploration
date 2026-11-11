@@ -48,7 +48,7 @@ The headline figure will plot wasted effort per open cell against r_c, with one 
 
 ```text
 configs/   experiment settings
-docs/      simulation plan and notes
+docs/      simulation plan
 figures/   plots made from results
 img/       illustrative images (not experiment output)
 results/   raw and summarized trial output
@@ -83,7 +83,6 @@ A single recorded master seed generates separate random streams for map generati
 ## Further reading
 
 - [`docs/simulation-plan.md`](docs/simulation-plan.md): the full plan, the decisions behind it, and what's still open.
-- A literature log (papers read so far and what I verified in each) is coming soon.
 
 ## License
 
