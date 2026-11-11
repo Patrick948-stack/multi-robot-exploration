@@ -1,0 +1,10 @@
+# Simulation and analysis
+numpy>=2.0
+scipy>=1.13
+pandas>=2.2
+
+# Plotting and animation
+matplotlib>=3.9
+
+# Testing
+pytest>=8.0
