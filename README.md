@@ -18,7 +18,6 @@ This is undergraduate research at Lehigh University, supervised by Prof. Hsuan-W
 
 When robots explore without a shared map, they can only learn what their teammates have found by communicating with them. A robot that hasn't heard from a teammate may map an area that teammate already covered, and that duplicated work is the wasted effort this project measures. At any moment, the team's communication can be represented as a network: each robot is a node (a point in the network), and two robots are linked when they are within communication range. A standard measure of how well connected such a network is, the **algebraic connectivity (λ₂)**, is a single number calculated from the pattern of links that reflects how hard it is to split the team into groups that cannot communicate. It is zero when the team is already split and grows as the robots become more strongly linked. But λ₂ describes the network at a single instant. As robots move, links form and break, so what determines wasted effort is how information spreads across the team over the whole run. We expect temporal measures, such as how often robots meet and how out of date their information about each other is, to explain wasted effort better than snapshot measures like λ₂.
 
-The simulations are meant to *show* whether this holds, not to prove it.
 
 ## Where things stand
 
