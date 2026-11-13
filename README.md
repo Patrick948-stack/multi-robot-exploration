@@ -1,14 +1,14 @@
 <p align="center">
-  <img src="img/mars-rover-mission-at-sunset.png" alt="Illustration of a team of rovers exploring a Martian landscape at sunset" width="800">
+  <img src="img/mars-rover-mission-at-sunset.png" alt="Illustration of a team of rovers exploring a Martian landscape at sunset generated with OpenAI Images 2.5" width="800">
 </p>
 
 <p align="center"><sub><i>Illustrative artwork only, not output from the simulator.</i></sub></p>
 
 # Multi-Robot Exploration: Communication and Wasted Effort
 
-Picture a team of robots sent into a building, a cave, or the surface of another planet, with no map. Each one explores on its own, and they can only swap what they've learned when they get close enough to talk. When they're out of range, two robots can end up mapping the same corridor without realizing it. That duplicated work is what this project is about.
+Imagine a team of robots sent into a building, a cave, the surface of new planet, or any other unexplored terrain with no map. Every robot explores on its own, but can only share what it's learned with the robots in the swarm learned when they get close enough to communicate. The goal is to map the terrain in the most efficient way possible. One problem is that, when it's out of range with its teammates, a robot can end up mapping parts of the terrain that another has already explored without realizing it. That duplicated work is what this project is about.
 
-I'm studying how the *pattern* of communication over time (who can reach whom, and how often) shapes how much exploration effort gets wasted. Everything happens in grid simulations; there's no hardware involved.
+I'm studying how the *pattern* of communication over time (which robots can communicate among each other, and how often) shapes how much exploration effort gets wasted. Everything happens in grid simulations; there's no hardware involved.
 
 This is undergraduate research at Lehigh University, supervised by Prof. Hsuan-Wei Lee.
 
@@ -16,7 +16,7 @@ This is undergraduate research at Lehigh University, supervised by Prof. Hsuan-W
 
 **How does the communication network's connectivity over time determine how much exploration effort is wasted?**
 
-The usual way to describe a network is a snapshot measure like algebraic connectivity (λ₂). My hunch is that a snapshot doesn't tell the whole story. I expect temporal measures, such as how often robots actually meet and how stale their information about each other is, to explain wasted effort much better.
+The usual way to describe a network is a snapshot measure like algebraic connectivity (λ₂). We predict that a snapshot doesn't tell the whole story, and that temporal measures, such as how often robots actually meet and how stale their information about each other is, to explain wasted effort much better.
 
 The simulations are meant to *show* whether that holds up, not to prove it.
 
