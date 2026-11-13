@@ -21,7 +21,7 @@ When robots explore without a shared map, they can only learn what their teammat
 
 ## Where things stand
 
-Planning is complete and the simulator is being built. There are no results yet. Every design decision, and the reasoning behind it, is in the full plan: [`docs/simulation-plan.md`](docs/simulation-plan.md).
+At this stage, I've completed the planning of the simulation and am working on implementing it. There are no results yet. Every design decision, and the reasoning behind it, is in the full plan: [`docs/simulation-plan.md`](docs/simulation-plan.md).
 
 ## How the simulation works
 
