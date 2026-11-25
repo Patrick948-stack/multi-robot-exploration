@@ -29,7 +29,11 @@ At any moment, the team's communication can be represented as a network: each ro
 
 ## Where things stand
 
-At this stage, I've completed the planning of the simulation and am working on implementing it. There are no results yet. Every design decision, and the reasoning behind it, is in the full plan: [`docs/simulation-plan.md`](docs/simulation-plan.md).
+- **Done:** the simulator, the sweep runner, the analysis scripts, the run animator, and **Fieldwork**, a local dashboard for running and inspecting experiments. All 38 automated tests pass, including both sanity checks below.
+- **Done:** the small `core` sweep (team sizes 1, 2 and 4 at the two communication extremes) runs end to end, from trials to figures.
+- **Next:** run the `pilot` sweep (the full design at 20 trials per setting) and review it with Prof. Lee before committing to the full 100-trial `main` sweep.
+
+No results have been reported yet; numbers in the screenshots below come from small test runs and are not findings. Every design decision, and the reasoning behind it, is in the full plan: [`docs/simulation-plan.md`](docs/simulation-plan.md).
 
 ## How the simulation works
 
@@ -74,18 +78,28 @@ The main figure will show wasted effort per open cell against communication rang
 ## What's in the repo
 
 ```text
-configs/   experiment settings
+configs/   experiment settings, one JSON file per sweep
 docs/      simulation plan
-figures/   plots made from results
+figures/   plots and animations made from results
 img/       illustrative images (not experiment output)
 results/   raw and summarized trial output
 src/       simulator code
 tests/     automated checks
 ```
 
+Inside `src/`:
+
+- `simulator.py` is the simulation itself: map generation, sensing, frontier choice, communication, map sharing and the wasted-effort count.
+- `experiment.py` runs a whole sweep of trials in parallel and saves the results.
+- `analysis.py` turns a results folder into figures and summary tables.
+- `animate.py` draws a single run as an animated GIF.
+- `dashboard.py` serves the local experiment dashboard.
+
+`tests/` holds three groups of checks: `test_sanity_checks.py` (the two checks described above), `test_components.py` (map generation, movement, sensing, frontiers, goal choice, links and the wasted-effort count) and `test_dashboard.py` (the dashboard produces the same trials as the command line).
+
 ## Tools
 
-Python, NumPy, SciPy, matplotlib, pandas, and pytest.
+Python, NumPy, SciPy, matplotlib, pandas, and pytest. The dashboard uses only Python's standard library web server and plain HTML, CSS and JavaScript, so it needs nothing beyond `requirements.txt`. [FFmpeg](https://ffmpeg.org) is optional; with it, exploration videos are saved as MP4 instead of GIF.
 
 ## Setup
 
@@ -97,11 +111,145 @@ source .venv/bin/activate      # on Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Once the simulator is implemented, run the automated checks with:
+Then run the automated checks, which include the sanity checks above:
 
 ```bash
 pytest
 ```
+
+## Experiment dashboard (Fieldwork)
+
+Fieldwork is a local web dashboard for running trials, watching them, and digging into saved results without touching the command line. With the virtual environment active, start it:
+
+```bash
+python src/dashboard.py
+```
+
+Open [Fieldwork on localhost](http://127.0.0.1:8765) and keep the terminal running while you use it. Use `--port` to serve on a different port.
+
+The dashboard calls the same code as the command line (`simulator.py`, `experiment.py`, `analysis.py` and `animate.py`) with the same seed rules, so the same settings and software version reproduce the same trial either way.
+
+### Workspace: live trial
+
+<p align="center">
+  <img src="img/dashboard-live-trial.jpg" alt="Fieldwork workspace running a live trial with four robots at communication range 6: a grid map with robots, sensing circles, trails and orange repeated-discovery cells, a row of measurements, and a chart of repeated discoveries over time" width="1000">
+</p>
+
+<p align="center"><sub><i>Four robots at range 6, paused at step 84 of 239. Orange cells are repeated discoveries; the chart below tracks W over the whole run, with a marker at the step shown.</i></sub></p>
+
+- Pick a team size, communication range and trial number, then **Run trial** to watch the robots explore step by step.
+- The header shows coverage, repeated discoveries (W, and W per open cell), the current step against the step cap, and how many separate communication groups the team is split into.
+- Toggle map layers: repeated discoveries, communication links, trails and sensing circles.
+- Drag the timeline, click the graph, or use the arrow keys to go back to any step. **Follow live** jumps back to the newest step.
+- **Over time** charts coverage, repeated discoveries, mean information age, algebraic connectivity (λ₂) or the number of connected groups.
+- **Save map** and **Save graph** export a PNG captioned with the settings and the step shown.
+- Settings that differ from the plan (replanning rule, obstacle density, open cells per robot, sensing radius, step cap, seed) sit under **Plan settings**, which shows how many have been changed. **Reset to plan values** puts them back.
+
+### Workspace: sweep
+
+<p align="center">
+  <img src="img/dashboard-sweep.jpg" alt="Fieldwork sweep mode with the core preset selected and a progress bar showing 84 of 120 trials finished" width="1000">
+</p>
+
+<p align="center"><sub><i>The <code>core</code> preset running: 3 team sizes × 2 ranges × 20 trials = 120 runs.</i></sub></p>
+
+**Sweep** runs many trials in parallel. Pick a preset from `configs/`, or type comma-separated team sizes and ranges and the number of trials per setting. The form shows how many runs that adds up to; follow the progress bar or open the run log, then **Open results** when it finishes.
+
+### Results
+
+<p align="center">
+  <img src="img/dashboard-results.jpg" alt="Fieldwork Results with a list of saved runs, the settings of the selected core sweep, a Compare settings table of wasted effort per open cell by team size and range, and the start of the sortable trials table" width="1000">
+</p>
+
+<p align="center"><sub><i>The finished <code>core</code> sweep. The yellow banner appears because this test run was made with uncommitted code changes.</i></sub></p>
+
+<p align="center">
+  <img src="img/fieldwork-results.jpg" alt="Fieldwork Results showing saved runs, sweep settings, and tables comparing coverage and repeated discoveries across communication ranges" width="1000">
+</p>
+
+<p align="center"><sub><i>Results for a four-trial example sweep, with settings and individual trials in one view.</i></sub></p>
+
+**Results** lists every saved run, from the dashboard and from command-line sweeps in `results/`. For the selected run it shows:
+
+- its settings, master seed, runtime and the code version it ran on, with a warning when the code had uncommitted edits or when trials failed or hit the step cap;
+- **Compare settings**: median wasted effort per open cell (with the 25th–75th percentile), the share of trials that reached full coverage, and median steps to 90% coverage, for each team size and range;
+- **Trials**: every trial, sortable by any column and filterable by team size and range.
+
+**Load settings** copies the run's settings back into the workspace.
+
+### Inspecting a trial
+
+<p align="center">
+  <img src="img/dashboard-trial-detail.jpg" alt="Selected trial detail: a table comparing the same map at range 0 and unlimited range, and an exploration video with the team view next to robot 0's own map" width="1000">
+</p>
+
+<p align="center"><sub><i>Trial 0 with four robots. On the same map, no communication cost 676 repeated discoveries; unlimited range cost none.</i></sub></p>
+
+<p align="center">
+  <img src="img/fieldwork-trial-detail.jpg" alt="Fieldwork trial details showing the same map at two communication ranges, and a preview of the exploration video" width="1000">
+</p>
+
+<p align="center"><sub><i>A selected trial with its paired comparison across ranges and its exploration video preview.</i></sub></p>
+
+Selecting a trial shows the same map, starting cells and robot seeds at every communication range, side by side, so the effect of range can be read directly. **Render video** reruns the trial from its seed and saved settings and draws the team's view next to one chosen robot's own map. A video is saved only when the rerun matches the recorded starting cells, open-cell count, coverage milestones, repeats, step count and stop reason, and the dashboard says so ("Saved summary matches"). **Load trial settings** opens the trial in the live workspace.
+
+### Figures
+
+<p align="center">
+  <img src="img/dashboard-figures.jpg" alt="Generated figures for the core sweep: wasted effort per open cell against communication range, coverage over time for each team size, steps to 90, 99 and 100 percent coverage, and information age and algebraic connectivity plotted against wasted effort" width="1000">
+</p>
+
+<p align="center"><sub><i>Figures generated from the <code>core</code> sweep (a small test run, not a result).</i></sub></p>
+
+**Generate figures** runs `analysis.py` on the selected sweep and shows the plots in place, with download links for each figure, the summary table and the rank correlations. The page also links the raw data files.
+
+Dashboard runs are saved under `results/dashboard/`, which git ignores; run the configs from the command line for results you want to keep in the repo.
+
+## Running it from the command line
+
+**Run a sweep.** Each file in `configs/` describes one set of trials, all with master seed 2026:
+
+| Config | Team sizes | Ranges | Trials each | Purpose |
+| --- | --- | --- | --- | --- |
+| `core.json` | 1, 2, 4 | 0, unlimited | 20 | Small first check on small maps (100 open cells per robot) |
+| `pilot.json` | 1–32 | 0, 3, 6, 12, unlimited | 20 | The full design at pilot scale |
+| `main.json` | 1–32 | 0, 3, 6, 12, unlimited | 100 | The main experiment |
+| `check_on_arrival.json` | 1–32 | 0, 3, 6, 12, unlimited | 100 | Robots pick a new goal only after arriving; paired with `main` |
+| `density_10.json` | 1–32 | 0, 3, 6, 12, unlimited | 100 | Robustness check at 10% obstacles |
+| `density_30.json` | 1–32 | 0, 3, 6, 12, unlimited | 100 | Robustness check at 30% obstacles |
+
+```bash
+python src/experiment.py configs/pilot.json
+```
+
+Results go to `results/pilot/`:
+
+- `trials.csv`: one row per trial.
+- `steps.csv.gz`: every step of every trial.
+- `maps/`: the maps and starting cells that were used.
+- `manifest.json`: the seed, software versions and git commit.
+
+**Make the figures.**
+
+```bash
+python src/analysis.py results/pilot
+```
+
+This writes the following to `figures/pilot/`:
+
+- the main figure (wasted effort per open cell against communication range, one line per team size)
+- coverage curves
+- steps to 90, 99 and 100% coverage
+- information age and λ₂ plotted against wasted effort
+- summary tables
+
+**Watch a single run.**
+
+```bash
+python src/animate.py --robots 4 --range 6
+```
+
+This saves a GIF and a final-frame PNG to `figures/animations/`. The left panel shows the whole team: the cells seen so far, each robot's sensing circle, and its communication links. Cells where a repeated discovery happened are shaded orange. The right panel shows one robot's own map, so you can watch it fill in when that robot meets its teammates. Use `--range unlimited` for full communication and `--trial` to pick a different map.
 
 ## Reproducibility
 
