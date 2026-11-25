@@ -103,7 +103,14 @@ progress { width: 100%; height: 8px; accent-color: var(--accent); }
 .metrics strong { font-size: 1.35rem; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .metrics small { color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; min-height: 1em; }
 .orange { color: var(--orange); }
-.map-stage { background: #0e1112; border-radius: 9px; overflow: hidden; }
+.map-stage { position: relative; background: #0e1112; border-radius: 9px; overflow: hidden; }
+#map { touch-action: none; }
+.map-tip { position: absolute; z-index: 2; max-width: 300px; padding: 9px 11px; border-radius: 8px; background: rgba(21, 25, 27, .97); border: 1px solid #434c52; box-shadow: 0 8px 24px rgba(0, 0, 0, .45); pointer-events: none; font-size: .78rem; line-height: 1.4; color: var(--muted); }
+.map-tip strong { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: .82rem; margin-bottom: 3px; }
+.map-tip p + p { margin-top: 4px; }
+.map-tip .swatch { flex: none; display: inline-block; }
+.map-tip .tip-robot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #05080a; }
+.map-tip hr { border: 0; border-top: 1px solid var(--line); margin: 7px 0; }
 #map { width: 100%; height: clamp(300px, 56vh, 560px); display: block; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 9px 0 8px; color: var(--muted); }
 .legend span, .legend label { display: inline-flex; align-items: center; gap: 5px; font-size: .76rem; font-weight: 550; color: var(--muted); }
@@ -114,10 +121,13 @@ progress { width: 100%; height: 8px; accent-color: var(--accent); }
 .wall { background: #07090a; border: 1px solid #4a5258; }
 .repeated { background: var(--orange); }
 .link { background: #3fa9f5; height: 3px; width: 12px; }
+.truth-open { background: #d5dce0; }
+.wall-unseen { background: #1c2023; border: 1px solid #3d454a; }
 .playback { display: flex; align-items: center; gap: 9px; border-top: 1px solid var(--line); padding-top: 9px; }
 .playback input { flex: 1; min-width: 40px; accent-color: var(--accent); }
 .playback span { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 84px; text-align: right; }
 .icon-button { width: 36px; padding-inline: 0; }
+.playback .speed { width: auto; margin: 0; min-width: 74px; font-variant-numeric: tabular-nums; }
 .chart-actions { display: flex; gap: 7px; }
 .chart-actions select { margin: 0; width: auto; }
 #chart { width: 100%; height: 210px; display: block; cursor: crosshair; touch-action: none; }
@@ -188,6 +198,7 @@ table.data { width: 100%; border-collapse: collapse; font-size: .84rem; font-var
   .engine { display: none; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #map { height: auto; aspect-ratio: 1; }
+  .map-stage.split #map { aspect-ratio: .55; }
   .figures { grid-template-columns: minmax(0, 1fr); }
   .card-title { flex-wrap: wrap; }
   .playback { flex-wrap: wrap; }

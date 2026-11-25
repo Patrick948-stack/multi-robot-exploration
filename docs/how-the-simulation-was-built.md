@@ -461,6 +461,14 @@ python src/dashboard.py     # then open http://127.0.0.1:8765
 
 <p align="center"><sub><i>Four robots at range 6, stopped at step 84 of 239.</i></sub></p>
 
+**Replay speed, hover details and the true map.** Replays play at 0.25× to 8×. Hovering over a cell or a robot explains what you are looking at, at that exact step. The **True map** option draws the simulator's full map beside the team's view.
+
+<p align="center">
+  <img src="../img/dashboard-true-map-hover.jpg" alt="Live trial at step 60 with the true map beside the team's view, speed set to 2x, and a tooltip over robot 1" width="900">
+</p>
+
+<p align="center"><sub><i>Step 60 of the same trial. Robot 1 has been out of contact for 41 steps and is standing on a cell it rediscovered: wasted effort, explained in place.</i></sub></p>
+
 **Sweep.** Choose a preset from `configs/` or type your own settings, and follow the progress bar.
 
 <p align="center">
@@ -509,6 +517,12 @@ flowchart LR
 Only one operation runs at a time (`JobManager`), which keeps the machine from being overloaded and the status display simple. The manager reads the worker's output line by line, saves it to a log, and picks up progress lines such as `84/120 done` to drive the progress bar.
 
 **How a live trial streams to the browser.** The worker uses the simulator's `on_frame` callback to write one line of JSON per step to `frames.jsonl` (robot positions, links, newly seen cells, repeated discoveries and the measures). It is paced at 20 steps per second so you can follow individual moves. The browser repeatedly asks the server for new frames, passing the byte offset where it stopped last time, and the server returns only the lines written since. Because every frame is saved, a finished trial can be replayed and scrubbed at any time without rerunning it.
+
+**Replay controls are built for reading the experiment, not just watching it.** Three features were added to the live-trial view. Each one serves the research question: why do robots waste effort, and how does that depend on who they can talk to?
+
+- **Playback speed.** A run can last hundreds or thousands of steps. Slowing down (0.25×, 0.5×) lets you watch the exact moment two robots link and merge maps, or a lone robot walk into an area a teammate already covered. Speeding up (up to 8×) lets you skim a long run for its overall shape. 1× is defined as 20 steps per second, the same pace a live trial is generated at, so "normal speed" means the same thing everywhere. The player is time-based: each animation frame works out how much time has passed and advances that many steps. A fixed timer would instead play more slowly on a busy computer and would not allow fractional speeds. The speed applies to replay only; while following a live trial, the view can only move as fast as the simulation produces steps.
+- **Hover details.** Colors on the map are a summary, and it is easy to misread them. For example, grey means *at least one* robot has seen a cell, not that every robot knows it, which is exactly why repeated discoveries happen. The tooltip spells out what a cell's color means at the step shown: when the team first saw it, and for an orange cell, when a robot that had not received that information rediscovered it. For a robot it shows its direct links, which robots share its map this step (including through a chain), and, if it is on its own, how many steps it has been since it last had any contact. That last number is the information-age idea from section 11, made visible for one robot. Everything in the tooltip is worked out in the browser from the frames already saved for the replay (positions, links, and the step each cell was first seen and first rediscovered). The simulator did not need to change, and the tooltip can only show what was actually recorded.
+- **True map.** The team view shows what the robots have found. The true map shows what is really there, with the robots drawn on both. Seeing them side by side makes the gap between the two obvious: how much is still unexplored, where the walls the robots have not found yet are, and whether a robot is heading into a dead end. The true map is drawn on the same canvas as the team view, so it is included when you save the map, and hovering works on both panels. On a narrow screen the two panels stack instead of sitting side by side. The robots never see the true map; it exists only for the person studying the run.
 
 **Videos are checked before they are saved.** Rendering a video reruns the trial from its seed. The server compares the rerun's summary (start cells, F, coverage, milestones, W, step count and stop reason) with the row saved in `trials.csv`. The video is kept only if every value matches, and the page shows "Saved summary matches". If anything differs, for example because the code changed since the sweep ran, the video is discarded and the mismatch is reported. This stops a video from silently showing something other than the trial it claims to show.
 

@@ -316,8 +316,31 @@ function canvasContext(canvas) {
   return { ctx, width, height };
 }
 
+// Where each map panel sits on the canvas, kept for hover lookups.
+let mapGeometry = null;
+const TRUTH = { open: "#d5dce0", wall: "#07090a" };
+const robotColor = i => ROBOT_COLORS[i % ROBOT_COLORS.length];
+
+/** One panel (team view) or two (team view and true map), side by side when there is room. */
+function mapPanels(width, height, rows, cols, withTruth) {
+  const boxes = !withTruth ? [{ kind: "team", x0: 0, y0: 0, w: width, h: height }] :
+    width >= height * 1.25 ?
+      [{ kind: "team", x0: 0, y0: 0, w: width / 2, h: height }, { kind: "truth", x0: width / 2, y0: 0, w: width / 2, h: height }] :
+      [{ kind: "team", x0: 0, y0: 0, w: width, h: height / 2 }, { kind: "truth", x0: 0, y0: height / 2, w: width, h: height / 2 }];
+  const title = withTruth ? 18 : 0;
+  return boxes.map(b => {
+    const cell = Math.min((b.w - 44) / cols, (b.h - 36 - title) / rows);
+    return {
+      ...b, cell, title,
+      left: b.x0 + (b.w - cols * cell) / 2 + 8,
+      top: b.y0 + title + (b.h - title - rows * cell) / 2 + 6,
+    };
+  });
+}
+
 function drawMap(replay, frame) {
   const surface = canvasContext($("map"));
+  mapGeometry = null;
   if (!surface) return;
   const { ctx, width, height } = surface;
   ctx.fillStyle = MAP.bg;
@@ -329,17 +352,37 @@ function drawMap(replay, frame) {
     ctx.fillText(replay.key ? "Waiting for the first step…" : "Choose settings and run a live trial.", width / 2, height / 2);
     return;
   }
+  const [rows, cols] = replay.header.shape;
+  const panels = mapPanels(width, height, rows, cols, $("show-truth").checked);
+  mapGeometry = { panels, rows, cols };
+  for (const panel of panels) {
+    if (panel.title) {
+      ctx.font = "bold 11px system-ui";
+      ctx.fillStyle = "#c7cfd5";
+      ctx.textAlign = "center";
+      ctx.fillText(panel.kind === "team" ? `Seen by the team at step ${frame.t}` : "True map (the robots never see this)",
+        panel.left + cols * panel.cell / 2, panel.y0 + 14);
+    }
+    drawPanel(ctx, panel, replay, frame);
+  }
+}
+
+function drawPanel(ctx, panel, replay, frame) {
   const { header, walls, firstSeen, firstRepeat } = replay;
   const [rows, cols] = header.shape;
-  const cell = Math.min((width - 44) / cols, (height - 36) / rows);
-  const left = (width - cols * cell) / 2 + 8, top = (height - rows * cell) / 2 + 6;
+  const { cell, left, top } = panel;
+  const team = panel.kind === "team";
   const x = c => left + (c + .5) * cell, y = r => top + (r + .5) * cell;
   const showRepeated = $("show-repeated").checked;
   const gap = cell > 6 ? .6 : 0;
   for (let i = 0; i < rows * cols; i++) {
-    const seen = firstSeen[i] >= 0 && firstSeen[i] <= frame.t;
-    ctx.fillStyle = walls[i] ? (seen ? MAP.wall : MAP.wallUnseen) :
-      showRepeated && firstRepeat[i] >= 0 && firstRepeat[i] <= frame.t ? MAP.repeated : seen ? MAP.seen : MAP.unknown;
+    if (team) {
+      const seen = firstSeen[i] >= 0 && firstSeen[i] <= frame.t;
+      ctx.fillStyle = walls[i] ? (seen ? MAP.wall : MAP.wallUnseen) :
+        showRepeated && firstRepeat[i] >= 0 && firstRepeat[i] <= frame.t ? MAP.repeated : seen ? MAP.seen : MAP.unknown;
+    } else {
+      ctx.fillStyle = walls[i] ? TRUTH.wall : TRUTH.open;
+    }
     ctx.fillRect(left + (i % cols) * cell, top + Math.floor(i / cols) * cell, cell - gap, cell - gap);
   }
   // Axis ticks (row, column) so a moment can be described precisely.
@@ -356,13 +399,12 @@ function drawMap(replay, frame) {
   ctx.moveTo(x(ec) - cell * .5 - 6, y(er) - 4); ctx.lineTo(x(ec) - cell * .5 - 1, y(er)); ctx.lineTo(x(ec) - cell * .5 - 6, y(er) + 4);
   ctx.fill();
 
-  const color = i => ROBOT_COLORS[i % ROBOT_COLORS.length];
-  if ($("show-trails").checked) {
+  if (team && $("show-trails").checked) {
     ctx.lineWidth = Math.max(1, cell * .18);
     ctx.globalAlpha = .6;
     ctx.lineJoin = "round";
     for (let i = 0; i < frame.positions.length; i++) {
-      ctx.strokeStyle = color(i);
+      ctx.strokeStyle = robotColor(i);
       ctx.beginPath();
       for (let t = Math.max(0, replay.cursor - 20); t <= replay.cursor; t++) {
         const [r, c] = replay.frames[t].positions[i];
@@ -372,11 +414,11 @@ function drawMap(replay, frame) {
     }
     ctx.globalAlpha = 1;
   }
-  if ($("show-sensing").checked) {
+  if (team && $("show-sensing").checked) {
     ctx.lineWidth = 1;
     ctx.globalAlpha = .55;
     frame.positions.forEach(([r, c], i) => {
-      ctx.strokeStyle = color(i);
+      ctx.strokeStyle = robotColor(i);
       ctx.beginPath();
       ctx.arc(x(c), y(r), header.sensing * cell, 0, 2 * Math.PI);
       ctx.stroke();
@@ -395,9 +437,9 @@ function drawMap(replay, frame) {
       ctx.stroke();
     }
   }
-  const radius = Math.max(2.6, Math.min(7.5, cell * .55));
+  const radius = robotRadius(cell);
   frame.positions.forEach(([r, c], i) => {
-    ctx.fillStyle = color(i);
+    ctx.fillStyle = robotColor(i);
     ctx.strokeStyle = "#05080a";
     ctx.lineWidth = 1.6;
     ctx.beginPath();
@@ -411,6 +453,182 @@ function drawMap(replay, frame) {
       ctx.fillText(String(i), x(c), y(r) + 3);
     }
   });
+}
+
+const robotRadius = cell => Math.max(2.6, Math.min(7.5, cell * .55));
+
+// ---------------------------------------------------------------------------
+// Hover details for the map
+// ---------------------------------------------------------------------------
+
+let mapPointer = null;  // last pointer position over the map, in canvas pixels
+
+/** Which panel, cell and robots are under a point on the map canvas. */
+function mapHit(px, py) {
+  const geometry = mapGeometry;
+  const frame = state.replay.frames[state.replay.cursor];
+  if (!geometry || !frame) return null;
+  const panel = geometry.panels.find(p => px >= p.x0 && px < p.x0 + p.w && py >= p.y0 && py < p.y0 + p.h);
+  if (!panel) return null;
+  const reach = Math.max(robotRadius(panel.cell) + 2, panel.cell / 2);
+  let best = Infinity, hitCell = null;
+  frame.positions.forEach(([r, c]) => {
+    const d = Math.hypot(px - (panel.left + (c + .5) * panel.cell), py - (panel.top + (r + .5) * panel.cell));
+    if (d <= reach && d < best) { best = d; hitCell = [r, c]; }
+  });
+  const c = Math.floor((px - panel.left) / panel.cell), r = Math.floor((py - panel.top) / panel.cell);
+  const [row, col] = hitCell || [r, c];
+  if (row < 0 || col < 0 || row >= geometry.rows || col >= geometry.cols) return null;
+  const robots = frame.positions.flatMap(([pr, pc], i) => pr === row && pc === col ? [i] : []);
+  return { panel, row, col, robots: hitCell ? robots : [] };
+}
+
+/** Robot groups at one step, from the links (robots joined directly or through a chain). */
+function groupsOf(frame) {
+  const parent = frame.positions.map((_, i) => i);
+  const find = i => parent[i] === i ? i : (parent[i] = find(parent[i]));
+  for (const [i, j] of frame.links) parent[find(i)] = find(j);
+  return frame.positions.map((_, i) => find(i));
+}
+
+const robotList = ids => ids.length === 1 ? `robot ${ids[0]}` : `robots ${ids.slice(0, -1).join(", ")} and ${ids.at(-1)}`;
+const swatch = color => node("i", { className: "swatch", style: `background:${color}` });
+
+function robotDetails(i, frame, replay) {
+  const { header, frames, cursor } = replay;
+  const [r, c] = frame.positions[i];
+  const range = rangeText(header.range);
+  const lines = [];
+  if (header.robots === 1) {
+    lines.push("A single robot: there are no teammates to share maps with.");
+  } else {
+    const direct = frame.links.flatMap(([a, b]) => a === i ? [b] : b === i ? [a] : []).sort((a, b) => a - b);
+    const roots = groupsOf(frame);
+    const group = roots.flatMap((root, j) => root === roots[i] && j !== i ? [j] : []);
+    if (rangeValue(header.range) === 0) lines.push("Communication range is 0, so it never shares its map.");
+    else if (direct.length) lines.push(`Directly linked to ${robotList(direct)} (closer than ${range} cells).`);
+    else lines.push(`No teammate is closer than ${range} cells, so it has no direct links.`);
+    if (group.length) {
+      lines.push(`Shares one combined map this step with ${robotList(group)}` +
+        (group.length > direct.length ? ", some through a chain of links." : "."));
+    } else {
+      lines.push("On its own: it works only from its own map, so it can rediscover cells its teammates have already seen.");
+      if (rangeValue(header.range) > 0) {
+        let last = -1;
+        for (let t = cursor - 1; t >= 0 && last < 0; t--) {
+          if (frames[t].links.some(([a, b]) => a === i || b === i)) last = frames[t].t;
+        }
+        lines.push(last < 0 ? "It has not been linked to a teammate since the start." :
+          `Last linked to a teammate at step ${last} (${frame.t - last} step${frame.t - last === 1 ? "" : "s"} ago).`);
+      }
+    }
+  }
+  if (cursor > 0) {
+    const [pr, pc] = frames[cursor - 1].positions[i];
+    lines.push(pr === r && pc === c ? "Stayed in place this step." : `Moved here from (${pr}, ${pc}) this step.`);
+  }
+  lines.push(`Sees open cells and walls up to ${header.sensing} cells away; walls block its view.`);
+  return [
+    node("strong", {}, node("i", { className: "tip-robot", style: `background:${robotColor(i)}` }), `Robot ${i} · cell (${r}, ${c})`),
+    ...lines.map(text => node("p", { textContent: text })),
+  ];
+}
+
+function cellDetails(hit, frame, replay) {
+  const { header, walls, firstSeen, firstRepeat, cols } = { ...replay, cols: replay.header.shape[1] };
+  const i = hit.row * cols + hit.col;
+  const t = frame.t, seenAt = firstSeen[i], repeatAt = firstRepeat[i];
+  const seen = seenAt >= 0 && seenAt <= t;
+  const later = seenAt > t ? ` The team first sees it at step ${seenAt}.` : "";
+  const [er, ec] = header.entrance;
+  const title = `Cell (${hit.row}, ${hit.col})${hit.row === er && hit.col === ec ? " · entrance" : ""}`;
+  let color, label, text;
+  if (hit.panel.kind === "truth") {
+    color = walls[i] ? TRUTH.wall : TRUTH.open;
+    label = walls[i] ? "Wall on the true map" : "Open ground on the true map";
+    text = [
+      "The simulator's full map. Robots never read it; they learn about a cell only by seeing it or from a linked teammate.",
+      seen ? `At step ${t} the team has seen this cell (first at step ${seenAt}).` : `At step ${t} no robot has seen this cell yet.${later}`,
+    ];
+  } else if (walls[i]) {
+    color = seen ? MAP.wall : MAP.wallUnseen;
+    label = seen ? "Wall, seen" : "Wall, not yet seen";
+    text = seen ? [`First seen at step ${seenAt}. Robots that know about it plan their paths around it.`] :
+      [`No robot has seen this wall yet, so no robot knows it is here. It is drawn a little darker than other unseen cells only to make the layout readable.${later}`];
+  } else if (!seen) {
+    color = MAP.unknown;
+    label = "Not yet seen";
+    text = [`No robot has seen this open cell yet, so it does not count toward coverage.${later}`];
+  } else if (repeatAt >= 0 && repeatAt <= t && $("show-repeated").checked) {
+    color = MAP.repeated;
+    label = "Repeated discovery";
+    text = [
+      `First seen by the team at step ${seenAt}. At step ${repeatAt} a robot that had not received that information saw it again for itself, which added to wasted effort (W).`,
+      "Any later rediscoveries of this cell count toward W too.",
+    ];
+  } else {
+    color = MAP.seen;
+    label = "Seen by the team";
+    text = [`First seen at step ${seenAt}.` + (repeatAt >= 0 && repeatAt <= t ?
+      ` Rediscovered at step ${repeatAt} (orange shading is turned off).` : " No robot has rediscovered it so far."),
+      "Grey means at least one robot has seen it. Robots that have not been in contact since may still think it is unknown."];
+  }
+  return [
+    node("strong", {}, swatch(color), title),
+    node("p", {}, node("b", { textContent: label + ". " }), text[0]),
+    ...text.slice(1).map(line => node("p", { textContent: line })),
+  ];
+}
+
+function updateTip() {
+  const tip = $("map-tip");
+  const hit = mapPointer && mapHit(mapPointer.x, mapPointer.y);
+  if (!hit) { tip.hidden = true; return; }
+  const replay = state.replay, frame = replay.frames[replay.cursor];
+  const parts = hit.robots.flatMap((i, k) => [...(k ? [node("hr")] : []), ...robotDetails(i, frame, replay)]);
+  if (parts.length) parts.push(node("hr"));
+  parts.push(...cellDetails(hit, frame, replay));
+  tip.replaceChildren(...parts);
+  tip.hidden = false;
+  const stage = $("map-stage").getBoundingClientRect();
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  const left = mapPointer.x + 16 + w > stage.width ? mapPointer.x - 16 - w : mapPointer.x + 16;
+  const top = Math.min(Math.max(4, mapPointer.y + 16), Math.max(4, stage.height - h - 4));
+  tip.style.left = Math.max(4, left) + "px";
+  tip.style.top = top + "px";
+}
+
+// ---------------------------------------------------------------------------
+// Playback speed
+// ---------------------------------------------------------------------------
+
+const LIVE_STEPS_PER_SECOND = 20;  // 1x replays at the pace a live trial runs
+const SPEEDS = [0.25, 0.5, 1, 1.5, 2, 4, 8];
+
+function setSpeed(value) {
+  $("speed").value = String(value);
+  try { localStorage.setItem("fieldwork-speed", String(value)); } catch { /* storage unavailable */ }
+}
+
+function stepSpeed(direction) {
+  const index = SPEEDS.indexOf(Number($("speed").value));
+  setSpeed(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, index + direction))]);
+}
+
+let lastTick = null, carry = 0;
+function playbackTick(now) {
+  requestAnimationFrame(playbackTick);
+  const replay = state.replay;
+  if (!replay.playing) { lastTick = null; carry = 0; return; }
+  if (lastTick !== null) carry += (now - lastTick) / 1000 * LIVE_STEPS_PER_SECOND * Number($("speed").value);
+  lastTick = now;
+  const steps = Math.floor(carry);
+  if (!steps) return;
+  carry -= steps;
+  const end = replay.frames.length - 1;
+  if (replay.cursor < end) replay.cursor = Math.min(end, replay.cursor + steps);
+  else if (replay.drained || !replay.key) replay.playing = false;
+  renderReplay();
 }
 
 function drawChart(replay) {
@@ -513,9 +731,13 @@ function renderReplay() {
   $("metric-cap").textContent = header?.cap ? `cap ${header.cap.toLocaleString()}` : "";
   $("metric-groups").textContent = frame ? frame.groups.toLocaleString() : "—";
   updateMapHeader();
+  const truth = $("show-truth").checked;
+  $("map-stage").classList.toggle("split", truth);
+  for (const item of all(".truth-only")) item.hidden = !truth;
   if (state.panel === "live") {
     drawMap(replay, frame);
     drawChart(replay);
+    updateTip();
   }
 }
 
@@ -950,6 +1172,16 @@ $("play").addEventListener("click", () => {
 document.addEventListener("keydown", event => {
   if (state.panel !== "live" || ["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(event.target.tagName)) return;
   const replay = state.replay;
+  if (event.key === ">" || event.key === "<") {
+    event.preventDefault();
+    stepSpeed(event.key === ">" ? 1 : -1);
+    return;
+  }
+  if ((event.key === " " || event.key === "k") && replay.frames.length > 1) {
+    event.preventDefault();
+    $("play").click();
+    return;
+  }
   if (!replay.frames.length || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
   event.preventDefault();
   const delta = (event.key === "ArrowRight" ? 1 : -1) * (event.shiftKey ? 10 : 1);
@@ -961,6 +1193,7 @@ $("save-map").addEventListener("click", () => {
   const legend = ["Grey: seen by the team", "dark: unseen", "black: walls"];
   if ($("show-repeated").checked) legend.push("orange: repeated discoveries");
   if ($("show-links").checked) legend.push("blue: links");
+  if ($("show-truth").checked) legend.push("right or below: the true map (light: open, black: walls)");
   exportCanvas($("map"), mapTitle(header), [frameSummary(), legend.join(" · ")],
     `fieldwork-N${header.robots}-rc${header.range}-trial${header.trial}-step${state.replay.frames[cursor].t}.png`);
 });
@@ -990,13 +1223,18 @@ const resize = new ResizeObserver(() => renderReplay());
 resize.observe($("map"));
 resize.observe($("chart"));
 
-setInterval(() => {
-  const replay = state.replay;
-  if (!replay.playing) return;
-  if (replay.cursor < replay.frames.length - 1) replay.cursor++;
-  else if (replay.drained || !replay.key) replay.playing = false;
-  renderReplay();
-}, 60);
+requestAnimationFrame(playbackTick);
+try {
+  const saved = Number(localStorage.getItem("fieldwork-speed"));
+  if (SPEEDS.includes(saved)) $("speed").value = String(saved);
+} catch { /* storage unavailable: keep 1x */ }
+$("speed").addEventListener("change", () => setSpeed(Number($("speed").value)));
+$("map").addEventListener("pointermove", event => {
+  const box = $("map").getBoundingClientRect();
+  mapPointer = { x: event.clientX - box.left, y: event.clientY - box.top };
+  updateTip();
+});
+$("map").addEventListener("pointerleave", () => { mapPointer = null; updateTip(); });
 
 $("analyze").addEventListener("click", () => perform("/api/start", { action: "analyze", key: state.run.key }, "results-error"));
 $("stop-analysis").addEventListener("click", () => perform("/api/stop", {}, "results-error"));

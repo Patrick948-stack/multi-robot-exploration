@@ -30,10 +30,10 @@ At any moment, the team's communication can be represented as a network: each ro
 ## Where things stand
 
 - **Done:** the simulator, the sweep runner, the analysis scripts, the run animator, and **Fieldwork**, a local dashboard for running and inspecting experiments. All 38 automated tests pass, including both sanity checks below.
-- **Done:** the small `core` sweep (team sizes 1, 2 and 4 at the two communication extremes) runs end to end, from trials to figures.
-- **Next:** run the `pilot` sweep (the full design at 20 trials per setting) and review it with Prof. Lee before committing to the full 100-trial `main` sweep.
+- **In progress:** reviewing the code to make sure it matches the simulation plan and the goals of the experiment, before any results are collected.
+- **Next:** once the review is done, run the small `core` sweep (team sizes 1, 2 and 4 at the two communication extremes), then the `pilot` sweep (the full design at 20 trials per setting), and review the pilot with Prof. Lee before committing to the full 100-trial `main` sweep.
 
-No results have been reported yet; numbers in the screenshots below come from small test runs and are not findings. Every design decision, and the reasoning behind it, is in the full plan: [`docs/simulation-plan.md`](docs/simulation-plan.md).
+No results have been reported yet; numbers in the screenshots below come from short test runs used to build and check the dashboard, and are not findings. Every design decision, and the reasoning behind it, is in the full plan: [`docs/simulation-plan.md`](docs/simulation-plan.md).
 
 ## How the simulation works
 
@@ -141,8 +141,19 @@ The dashboard calls the same code as the command line (`simulator.py`, `experime
 - The header shows coverage, repeated discoveries (W, and W per open cell), the current step against the step cap, and how many separate communication groups the team is split into.
 - Toggle map layers: repeated discoveries, communication links, trails and sensing circles.
 - Drag the timeline, click the graph, or use the arrow keys to go back to any step. **Follow live** jumps back to the newest step.
+- **Play** replays the run. Pick a speed from 0.25× to 8×, like a video player (1× is 20 steps per second, the pace of a live trial). Shortcuts: Space or K plays and pauses, Shift+< and Shift+> change the speed. The speed you pick is remembered.
+- **Hover** over any cell or robot for details at the step shown:
+  - a **cell** tells you what its color means right now: whether the team has seen it and when, whether it is a wall, and, for an orange cell, when it was first seen and when a robot rediscovered it;
+  - a **robot** tells you which teammates it is linked to, which robots share its map this step, how long ago it last had contact if it is on its own, and whether it moved.
+- **True map** shows the simulator's full map beside the team's view (or below it on a narrow screen), with the robots on both. Comparing the two shows how much of the real layout the team has found so far. The robots never see the true map.
 - **Over time** charts coverage, repeated discoveries, mean information age, algebraic connectivity (λ₂) or the number of connected groups.
-- **Save map** and **Save graph** export a PNG captioned with the settings and the step shown.
+- **Save map** and **Save graph** export a PNG captioned with the settings and the step shown. When the true map is on, the saved map includes it.
+
+<p align="center">
+  <img src="img/dashboard-true-map-hover.jpg" alt="Fieldwork live trial at step 60 with the true map shown beside the team's view, playback speed set to 2x, and a tooltip over robot 1 explaining it has no links, last had contact 41 steps ago, and is standing on a repeated-discovery cell" width="1000">
+</p>
+
+<p align="center"><sub><i>The same trial at step 60, with the true map on the right. Hovering over robot 1 shows it has been out of contact for 41 steps and is standing on a cell it rediscovered.</i></sub></p>
 - Settings that differ from the plan (replanning rule, obstacle density, open cells per robot, sensing radius, step cap, seed) sit under **Plan settings**, which shows how many have been changed. **Reset to plan values** puts them back.
 
 ### Workspace: sweep

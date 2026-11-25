@@ -97,8 +97,9 @@
             <div><span>Step</span><strong id="metric-step">—</strong><small id="metric-cap"></small></div>
             <div><span>Groups</span><strong id="metric-groups">—</strong></div>
           </div>
-          <div class="map-stage">
-            <canvas id="map" role="img" aria-label="Exploration grid with robot positions and communication links"></canvas>
+          <div class="map-stage" id="map-stage">
+            <canvas id="map" role="img" aria-label="Exploration grid with robot positions and communication links. Hover a cell or robot for details."></canvas>
+            <div class="map-tip" id="map-tip" role="tooltip" hidden></div>
           </div>
           <div class="legend" aria-label="Map layers">
             <span><i class="swatch explored"></i>Seen by team</span>
@@ -108,9 +109,20 @@
             <label><input id="show-links" type="checkbox" checked><i class="swatch link"></i>Links</label>
             <label><input id="show-trails" type="checkbox" checked>Trails</label>
             <label><input id="show-sensing" type="checkbox">Sensing radius</label>
+            <label title="Show the full map the simulator holds, which the robots never see"><input id="show-truth" type="checkbox">True map</label>
+            <span class="truth-only" hidden><i class="swatch truth-open"></i>Open (true map)</span>
           </div>
           <div class="playback">
             <button class="icon-button" id="play" type="button" aria-label="Play" title="Play" disabled>▶</button>
+            <select id="speed" class="speed" aria-label="Playback speed" title="Playback speed (Shift+< slower, Shift+> faster). 1× is 20 steps per second, the pace of a live trial.">
+              <option value="0.25">0.25×</option>
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2">2×</option>
+              <option value="4">4×</option>
+              <option value="8">8×</option>
+            </select>
             <input id="timeline" type="range" min="0" max="0" value="0" aria-label="Simulation step" disabled>
             <span id="timeline-label">—</span>
             <button class="secondary" id="latest" type="button" disabled>Follow live</button>
