@@ -2,10 +2,10 @@
   <img src="img/mars-rover-mission-at-sunset.png" alt="Illustration of a team of rovers exploring a Martian landscape at sunset generated with OpenAI Images 2.5" width="800">
 </p>
 
-<p align="center"><sub><i>Illustrative artwork only, not output from the simulator.</i></sub></p>
+<p align="center"><sub><i>Illustrative image only, not output from the simulator.</i></sub></p>
 
 # Multi-Robot Exploration: Communication and Wasted Effort
-
+## The setup
 Imagine a team of robots sent into a building, a cave, the surface of a new planet, or any other unexplored terrain with no map. Each robot explores on its own and can share what it has learned only with teammates close enough to communicate with. The goal is to map the terrain as efficiently as possible, but limited communication gets in the way: a robot that is out of range of its teammates can end up mapping ground that another robot has already explored, without knowing it. This project studies that duplicated work.
 
 Specifically, I'm studying how the *pattern* of communication over time (which robots can communicate with each other, and how often) shapes how much exploration effort is wasted. All of the work is done in grid simulations; there is no hardware involved.
