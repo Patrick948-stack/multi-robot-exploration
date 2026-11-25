@@ -258,6 +258,7 @@ Every random choice in the project comes from a single recorded master seed (a s
 ## Further reading
 
 - [`docs/simulation-plan.md`](docs/simulation-plan.md): the full plan, the decisions behind it, and the questions that are still open.
+- [`docs/how-the-simulation-was-built.md`](docs/how-the-simulation-was-built.md): a beginner-friendly walkthrough of the code, explaining how each part works and why it was built that way, with screenshots.
 
 ## License
 
