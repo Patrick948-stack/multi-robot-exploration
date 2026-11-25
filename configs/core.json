@@ -1,0 +1,9 @@
+{
+  "name": "core",
+  "description": "Step 1 from Prof. Lee: small maps, N in {1, 2, 4}, only the two communication extremes.",
+  "master_seed": 2026,
+  "team_sizes": [1, 2, 4],
+  "comm_ranges": [0, "unlimited"],
+  "trials": 20,
+  "open_cells_per_robot": 100
+}

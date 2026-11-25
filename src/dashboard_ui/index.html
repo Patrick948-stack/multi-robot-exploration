@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111416">
+  <title>Fieldwork</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Fieldwork</div>
+    <nav aria-label="Workspace">
+      <button class="nav-item" data-panel="live" aria-current="page">Workspace</button>
+      <button class="nav-item" data-panel="results">Results</button>
+    </nav>
+    <span class="engine" id="engine"><i></i>Local engine</span>
+  </header>
+
+  <main>
+    <!-- Workspace: configure on the left, watch on the right -->
+    <section id="live" class="workspace">
+      <aside class="card settings">
+        <div class="segmented" role="group" aria-label="Run type">
+          <button type="button" data-mode="trial" aria-pressed="true">Live trial</button>
+          <button type="button" data-mode="sweep" aria-pressed="false">Sweep</button>
+        </div>
+        <form id="run-form" novalidate>
+          <fieldset id="parameters">
+            <label class="sweep-only" hidden>Preset
+              <select id="preset"><option value="">Custom</option></select>
+            </label>
+            <div class="form-grid">
+              <label><span class="trial-only">Robots (N)</span><span class="sweep-only" hidden>Team sizes</span>
+                <input id="team_sizes" inputmode="numeric" autocomplete="off" required></label>
+              <label>Comm. range
+                <input id="comm_ranges" autocomplete="off" required></label>
+              <label class="trial-only">Trial
+                <input id="trial_index" type="number" min="0" required></label>
+              <label class="sweep-only" hidden>Trials each
+                <input id="trials" type="number" min="1" max="1000" required></label>
+            </div>
+            <p class="note" id="mode-note"></p>
+
+            <details id="plan-settings">
+              <summary>Plan settings <span class="chip warn" id="changed" hidden></span></summary>
+              <div class="advanced">
+                <label>Replanning
+                  <select id="replan">
+                    <option value="immediate">Immediate (main plan)</option>
+                    <option value="on_arrival">On arrival (check run)</option>
+                  </select></label>
+                <div class="form-grid">
+                  <label>Obstacles (%)<input id="obstacle_density" type="number" min="0" max="50" step="1" required></label>
+                  <label>Open cells / robot<input id="open_cells_per_robot" type="number" min="25" max="2000" required></label>
+                  <label>Sensing radius<input id="sensing_radius" type="number" min="1" max="20" required></label>
+                  <label>Step cap (× F)<input id="step_cap_factor" type="number" min="1" max="20" required></label>
+                  <label>Master seed<input id="master_seed" type="number" min="0" max="4294967295" required></label>
+                  <label class="sweep-only" hidden>Workers<input id="workers" type="number" min="1" required></label>
+                </div>
+                <button type="button" class="link-button" id="reset-plan">Reset to plan values</button>
+              </div>
+            </details>
+          </fieldset>
+          <button class="primary run-button" id="start" type="submit" disabled>Run trial</button>
+        </form>
+        <button class="secondary wide" id="stop" hidden>Stop</button>
+        <p class="error" id="run-error" role="alert" hidden></p>
+      </aside>
+
+      <div class="monitor">
+        <section class="card progress-card" id="sweep-progress" hidden>
+          <div class="card-title">
+            <div><h2>Sweep</h2><p id="sweep-detail"></p></div>
+            <span class="badge" id="sweep-status"></span>
+          </div>
+          <progress id="sweep-bar" max="1" value="0"></progress>
+          <div class="row-actions">
+            <a id="sweep-log" target="_blank" rel="noopener">Run log</a>
+            <button id="sweep-results" class="primary" hidden>Open results</button>
+          </div>
+        </section>
+
+        <section class="card sweep-ready" id="sweep-ready" hidden>
+          <h2>Run a sweep</h2>
+          <p>Choose team sizes, ranges, and trials per setting. Once the sweep ends, compare settings and inspect individual trials in Results.</p>
+        </section>
+        <section class="card map-card" id="map-card">
+          <div class="card-title">
+            <div><h2 id="map-title">Exploration map</h2><p id="map-detail">Run a live trial to watch the team explore.</p></div>
+            <span class="badge" id="map-status" hidden></span>
+          </div>
+          <div class="metrics" aria-label="Trial measurements at the selected step">
+            <div><span>Coverage</span><strong id="metric-coverage">—</strong></div>
+            <div><span>Repeated discoveries (W)</span><strong id="metric-wasted" class="orange">—</strong><small id="metric-wpf"></small></div>
+            <div><span>Step</span><strong id="metric-step">—</strong><small id="metric-cap"></small></div>
+            <div><span>Groups</span><strong id="metric-groups">—</strong></div>
+          </div>
+          <div class="map-stage">
+            <canvas id="map" role="img" aria-label="Exploration grid with robot positions and communication links"></canvas>
+          </div>
+          <div class="legend" aria-label="Map layers">
+            <span><i class="swatch explored"></i>Seen by team</span>
+            <span><i class="swatch unknown"></i>Unseen</span>
+            <span><i class="swatch wall"></i>Wall</span>
+            <label><input id="show-repeated" type="checkbox" checked><i class="swatch repeated"></i>Repeated discovery</label>
+            <label><input id="show-links" type="checkbox" checked><i class="swatch link"></i>Links</label>
+            <label><input id="show-trails" type="checkbox" checked>Trails</label>
+            <label><input id="show-sensing" type="checkbox">Sensing radius</label>
+          </div>
+          <div class="playback">
+            <button class="icon-button" id="play" type="button" aria-label="Play" title="Play" disabled>▶</button>
+            <input id="timeline" type="range" min="0" max="0" value="0" aria-label="Simulation step" disabled>
+            <span id="timeline-label">—</span>
+            <button class="secondary" id="latest" type="button" disabled>Follow live</button>
+            <button class="secondary" id="save-map" type="button" disabled>Save map</button>
+          </div>
+        </section>
+
+        <section class="card chart-card" id="chart-card">
+          <div class="card-title">
+            <h2>Over time</h2>
+            <div class="chart-actions">
+              <select id="chart-metric" aria-label="Measurement">
+                <option value="coverage">Coverage</option>
+                <option value="wasted">Repeated discoveries (W)</option>
+                <option value="age">Mean information age</option>
+                <option value="lambda2">Algebraic connectivity (λ₂)</option>
+                <option value="groups">Connected groups</option>
+              </select>
+              <button class="secondary" id="save-chart" disabled>Save graph</button>
+            </div>
+          </div>
+          <canvas id="chart" role="img" aria-label="Selected measurement over simulation steps"></canvas>
+          <p class="note" id="chart-note" hidden></p>
+        </section>
+      </div>
+    </section>
+
+    <!-- Results: pick a saved run, then everything about it -->
+    <section id="results" class="results" hidden>
+      <aside class="card run-list">
+        <div class="card-title"><h2>Saved runs</h2><span class="count" id="result-count"></span></div>
+        <div id="runs" role="listbox" aria-label="Saved runs"></div>
+        <div id="results-empty" class="empty">
+          <strong>No saved runs yet</strong>
+          <p>Run a live trial or a sweep in the workspace.</p>
+          <button class="secondary" data-panel="live">Open workspace</button>
+        </div>
+      </aside>
+
+      <div class="run-detail" id="run-detail" hidden>
+        <section class="card">
+          <div class="card-title">
+            <div><h2 id="run-title"></h2><p class="mono" id="run-path"></p></div>
+            <div class="row-actions">
+              <button class="secondary" id="replay" hidden>Open replay</button>
+              <button class="secondary" id="load-settings">Load settings</button>
+            </div>
+          </div>
+          <dl class="settings-list" id="run-settings"></dl>
+          <div id="run-alerts"></div>
+        </section>
+
+        <section class="card" id="compare-card" hidden>
+          <div class="card-title"><div><h2>Compare settings</h2>
+            <p>Median repeated discoveries per open cell, W / F (25th–75th percentile). Select a range to list its trials.</p></div></div>
+          <div class="table-scroll"><table class="data">
+            <thead><tr><th>N</th><th>Range</th><th class="num">Trials</th><th class="num">Reached 100%</th><th class="num">W / F, median (IQR)</th><th class="num">Steps to 90%, median</th></tr></thead>
+            <tbody id="compare-rows"></tbody>
+          </table></div>
+        </section>
+
+        <section class="card" id="trials-card" hidden>
+          <div class="card-title">
+            <div><h2>Trials</h2><p id="trial-count"></p></div>
+            <div class="filters">
+              <label>N<select id="filter-size"></select></label>
+              <label>Range<select id="filter-range"></select></label>
+            </div>
+          </div>
+          <div class="table-scroll"><table class="data sortable">
+            <thead><tr id="trial-head"></tr></thead>
+            <tbody id="trial-rows"></tbody>
+          </table></div>
+          <div class="page-controls">
+            <button class="secondary" id="trial-prev">Previous</button>
+            <button class="secondary" id="trial-next">Next</button>
+          </div>
+        </section>
+
+        <section class="card selected-trial" id="trial-card" hidden>
+          <div class="card-title">
+            <div><h2 id="trial-title"></h2><p id="trial-subtitle"></p></div>
+            <button class="secondary" id="watch-live">Load trial settings</button>
+          </div>
+          <div class="trial-grid">
+            <div id="paired-trials">
+              <h3>Same map at each range</h3>
+              <p class="note">For this team size and trial index, the map, starts, and robot seeds are shared. Missing trials are marked below.</p>
+              <table class="data compact"><thead><tr><th>Range</th><th class="num">Steps</th><th class="num">W</th><th class="num">W / F</th><th>Stopped by</th></tr></thead>
+                <tbody id="pair-rows"></tbody></table>
+            </div>
+            <div>
+              <h3>Exploration video</h3>
+              <div class="row-actions start">
+                <label>Robot map shown<select id="video-watch"></select></label>
+                <button class="primary" id="render-video">Render video</button>
+                <button class="secondary" id="stop-video" hidden>Stop</button>
+              </div>
+              <p class="status" id="video-status" role="status" hidden></p>
+              <div id="video-preview"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-title">
+            <div><h2>Figures</h2><p id="figure-path" class="mono"></p></div>
+            <div class="row-actions">
+              <button class="secondary" id="stop-analysis" hidden>Stop</button>
+              <button class="primary" id="analyze">Generate figures</button>
+            </div>
+          </div>
+          <p class="status" id="analysis-status" role="status" hidden></p>
+          <div id="figures" class="figures"></div>
+          <div class="downloads" id="tables"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-title"><h2>Data files</h2></div>
+          <div class="downloads" id="downloads"></div>
+        </section>
+        <p class="error" id="results-error" role="alert" hidden></p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

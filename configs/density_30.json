@@ -1,0 +1,9 @@
+{
+  "name": "density_30",
+  "description": "Robustness check: 30% obstacle density.",
+  "master_seed": 2026,
+  "team_sizes": [1, 2, 4, 8, 16, 32],
+  "comm_ranges": [0, 3, 6, 12, "unlimited"],
+  "trials": 100,
+  "obstacle_density": 0.30
+}

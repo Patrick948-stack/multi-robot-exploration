@@ -1,0 +1,8 @@
+{
+  "name": "pilot",
+  "description": "Step 2 from Prof. Lee: the full design at about 20 trials per setting.",
+  "master_seed": 2026,
+  "team_sizes": [1, 2, 4, 8, 16, 32],
+  "comm_ranges": [0, 3, 6, 12, "unlimited"],
+  "trials": 20
+}

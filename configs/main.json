@@ -1,0 +1,8 @@
+{
+  "name": "main",
+  "description": "Main sweep: every team size and range, 100 trials per setting.",
+  "master_seed": 2026,
+  "team_sizes": [1, 2, 4, 8, 16, 32],
+  "comm_ranges": [0, 3, 6, 12, "unlimited"],
+  "trials": 100
+}

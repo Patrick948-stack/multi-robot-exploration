@@ -1,0 +1,9 @@
+{
+  "name": "check_on_arrival",
+  "description": "Check run (section 4): robots pick a new goal only after arriving. Same seeds as main, so trials are paired.",
+  "master_seed": 2026,
+  "team_sizes": [1, 2, 4, 8, 16, 32],
+  "comm_ranges": [0, 3, 6, 12, "unlimited"],
+  "trials": 100,
+  "replan": "on_arrival"
+}
